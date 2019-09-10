@@ -6,11 +6,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include "allegro-5.0.10-mingw-4.7.0\include\allegro5\allegro.h"
-#include "allegro-5.0.10-mingw-4.7.0\include\allegro5\allegro_audio.h"
-#include "allegro-5.0.10-mingw-4.7.0\include\allegro5\allegro_acodec.h"
-#include "allegro-5.0.10-mingw-4.7.0\include\allegro5\allegro_image.h"
-#include "allegro-5.0.10-mingw-4.7.0\include\allegro5\allegro_primitives.h"
+#include "allegro\include\allegro5\allegro.h"
+#include "allegro\include\allegro5\allegro_audio.h"
+#include "allegro\include\allegro5\allegro_acodec.h"
+#include "allegro\include\allegro5\allegro_image.h"
+#include "allegro\include\allegro5\allegro_primitives.h"
 #define playerSpeed 7.5
 #define initialPlayerHealth 4
 #define bulletSpeed 25
@@ -606,7 +606,7 @@ void CheckHighScore()
 	
 	if(player.score < highScore)
 		return;
-		
+
 	saveFile = fopen(savePath, "wb");
 	if(saveFile == NULL)
 	{
