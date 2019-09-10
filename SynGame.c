@@ -15,15 +15,45 @@
 #define initialPlayerHealth 4
 #define bulletSpeed 25
 #define numberImageSize 5
-#define scoreDigitLimit 10
+#define scoreDigitLimit 11
 #define enemyLimiter 8
 #define initialEnemyLimit 3
+#define sampleCount 3
 
 typedef struct
 {
 	float x;
 	float y;
 } Vector2D;
+
+typedef struct
+{
+	Vector2D position;
+	/* char health; */
+	float moveSpeed;
+	float fireCooldown;
+	Vector2D velocity;
+} Enemy;
+
+typedef struct
+{
+	char isEnemyBullet;
+	Vector2D position;
+	Vector2D velocity;
+} Bullet;
+
+struct 
+{
+	int enemyLimit;
+	int enemyCount;
+	Enemy *enemyArray;
+} enemies;
+
+struct 
+{
+	int bulletCount;
+	Bullet *bulletArray;
+} bullets;
 
 struct
 {
@@ -38,35 +68,6 @@ struct
 
 	ALLEGRO_BITMAP *playerImage;
 } player;
-
-typedef struct
-{
-	Vector2D position;
-	/* char health; */
-	float moveSpeed;
-	float fireCooldown;
-	Vector2D velocity;
-} Enemy;
-
-struct 
-{
-	int enemyLimit;
-	int enemyCount;
-	Enemy *enemyArray;
-} enemies;
-
-typedef struct
-{
-	char isEnemyBullet;
-	Vector2D position;
-	Vector2D velocity;
-} Bullet;
-
-struct 
-{
-	int bulletCount;
-	Bullet *bulletArray;
-} bullets;
 
 void SpawnEnemies();
 void CheckBullets();
@@ -86,6 +87,7 @@ void GetHighScore();
 void DrawNumber(Vector2D position, int number);
 void Inputs();
 void PlayerMovement();
+void ClampPlayerPositionToScreen();
 void BulletMovement();
 void ShootSoundEffect();
 void DieSoundEffect();
@@ -110,6 +112,8 @@ ALLEGRO_EVENT_QUEUE *event_queue = NULL;
 ALLEGRO_TIMER *timer = NULL;
 ALLEGRO_COLOR backgroundColor;
 ALLEGRO_BITMAP *gameOverImage;
+
+ALLEGRO_SAMPLE *BGM;
 
 ALLEGRO_SAMPLE *shootSound;
 ALLEGRO_SAMPLE_ID shootSoundID;
@@ -136,7 +140,6 @@ unsigned int highScore = 0;
 Vector2D input;
 byte isRestart = 0;
 byte isRunning = 1;
-byte isGameStarted = 0;
 byte isGameOver = 0;
 
 void Update()
@@ -176,9 +179,11 @@ void Update()
 		timeFromStart += deltaTime;
 		player.score = (int)(timeFromStart * timeFromStart) * (player.killedEnemyCount + 1);
 
+		/* To limit enemies on the screen */
 		if(enemies.enemyLimit != enemyLimiter)
 		{
 			enemies.enemyLimit = initialEnemyLimit + (int)(timeFromStart / 10);
+			
 			if(enemies.enemyCount > enemyLimiter)
 				enemies.enemyLimit = enemyLimiter;
 		}
@@ -211,6 +216,7 @@ int main(int argc, char **argv)
 {
 	if(InitializeGameWindow() == 0)
 		return 0;
+	
 	do
 	{
 		if(InitializeGame() == 0)
@@ -270,6 +276,11 @@ byte isVectorExceedingLimits(Vector2D vector, Vector2D limits)
 	return result;
 }
 
+/* 
+	Gets the shortest dimensions of both images, sums these dimension and divides by 2 to get minimum accepted distance.
+	And compares the distance between those objects to the minimum distancce to check if they're colliding.
+	It's the most optimized way I can think of for a game like this.
+ */
 byte CheckCollision(Vector2D *firstPos, Vector2D *secondPos, ALLEGRO_BITMAP *firstMap, ALLEGRO_BITMAP *secondMap)
 {
 	Vector2D firstImageSize;
@@ -285,8 +296,7 @@ byte CheckCollision(Vector2D *firstPos, Vector2D *secondPos, ALLEGRO_BITMAP *fir
 	minDistance = firstImageSize.x > firstImageSize.y ? firstImageSize.y : firstImageSize.x;
 	minDistance += secondImageSize.x > secondImageSize.y ? secondImageSize.y : secondImageSize.x;
 
-	minDistance /= 2;
-	minDistance *= sizeMultiplier;
+	minDistance *= sizeMultiplier * 0.5f;
 
 	distance = VectorDistance(*firstPos, *secondPos);
 
@@ -304,7 +314,7 @@ char InitializeGameWindow()
 		!al_init_image_addon() || 
 		!al_install_audio() || 
 		!al_init_acodec_addon() || 
-		!al_reserve_samples(1))
+		!al_reserve_samples(sampleCount))
 		return 0;
 
 	al_get_display_mode(al_get_num_display_modes() - 1, &disp_data);
@@ -350,6 +360,10 @@ char InitializeGameWindow()
 	backgroundColor.a = 0;
 	backgroundColor.a = 0;
 	backgroundColor.a = 0;
+	
+	/* BGM is an exception since I don't want to it to restart itself every restart */
+	BGM = al_load_sample("Sounds/Background.wav");
+	al_play_sample(BGM, 1.0, 0.0, 1.0, ALLEGRO_PLAYMODE_LOOP, NULL);
 }
 
 char InitializeGame()
@@ -374,10 +388,10 @@ char InitializeGame()
 		enemyDieSound == NULL)
 		return 0;
 
+	/* Game Initialization */
 	isRunning = 1;
 	isRestart = 0;
 	isGameOver = 0;
-	isGameStarted = 0;
 	timeFromStart = 0;
 	player.killedEnemyCount = 0;
 	return 1;
@@ -385,7 +399,6 @@ char InitializeGame()
 
 void InitializeEnemies()
 {
-	int i = 0;
 	enemies.enemyLimit = initialEnemyLimit;
 	enemies.enemyCount = 0;
 	enemies.enemyArray = (Enemy *) malloc(sizeof(Enemy) * enemies.enemyCount);
@@ -398,32 +411,36 @@ void InitializeEnemies()
 
 void SpawnEnemies()
 {
-	if(enemyRespawnCounter > 10000)
-		enemyRespawnCounter = 0;
-
 	Vector2D enemySpawnVector;
-	Vector2D enemyvelocity;
+	Vector2D enemyVelocity;
 	Enemy *enemy;
 	float speed;
 	int randomNumber;
+
+	if(enemyRespawnCounter > 10000)
+		enemyRespawnCounter = 0;
+
 	while (enemies.enemyCount < enemies.enemyLimit)
 	{
+		/* enemyRespawnCounter is just for making the value of rand() more randomized */
     	srand(time(0) + enemyRespawnCounter);
-		enemies.enemyCount++;
 		randomNumber = rand() * enemies.enemyCount;
+		enemies.enemyCount++;
 		enemies.enemyArray = (Enemy *) realloc(enemies.enemyArray, sizeof(Enemy) * enemies.enemyCount);
-		enemyvelocity.x = (float)(randomNumber % 20000) / 10000;
-		enemyvelocity.y = (float)(randomNumber % 2000) / 1000;
-		enemyvelocity.x *= randomNumber % 2 == 0 ? -1 : 1;
-		enemyvelocity.y *= randomNumber % 4 >= 2  ? -1 : 1;
+
+		/* Randomizing the velocity */
+		enemyVelocity.x = (float)(randomNumber % 20000) / 10000;
+		enemyVelocity.y = (float)(randomNumber % 2000) / 1000;
+		enemyVelocity.x *= randomNumber % 2 == 0 ? -1 : 1;
+		enemyVelocity.y *= randomNumber % 4 >= 2  ? -1 : 1;
 
 		speed = (float)(randomNumber % 500 / 100 + 2);
 		enemy = (enemies.enemyArray + enemies.enemyCount - 1);
-		enemy -> velocity = NormalizeVector(enemyvelocity);
+		enemy -> velocity = NormalizeVector(enemyVelocity);
 		enemy -> moveSpeed = speed;
 
-		enemySpawnVector.x = enemyvelocity.x > 0 ? 0 : screenDimensions.x;
-		enemySpawnVector.y = enemyvelocity.y > 0 ? 0 : screenDimensions.y;
+		enemySpawnVector.x = enemyVelocity.x > 0 ? 0 : screenDimensions.x;
+		enemySpawnVector.y = enemyVelocity.y > 0 ? 0 : screenDimensions.y;
 
 		enemy -> position = enemySpawnVector;
 		enemy -> fireCooldown = 01.0 / (rand() % 5) + 2.0;
@@ -468,7 +485,7 @@ void RemoveEnemyAtIndex(int index)
 	
 	enemies.enemyCount--;
 	enemies.enemyArray = (Enemy *) realloc(enemies.enemyArray, sizeof(Enemy) * enemies.enemyCount);
-	printf("New Enemy Count = %d\n", enemies.enemyCount);
+
 	DieSoundEffect();
 }
 
@@ -564,10 +581,10 @@ void DrawScore()
 	unsigned int processedScore = player.score;
 	char digit;
 	Vector2D spawnPosition;
-	int i = scoreDigitLimit;
+	int i = scoreDigitLimit - 1;
 
-	/*while (processedScore >= 1 && i > 0)*/
-	while (i > 0)
+	/* while (processedScore >= 1 && i > 0) */
+	while (i >= 0)
 	{
 		spawnPosition = scorePosition;
 		/* numberImageSize + 1 is because 1 pixel space between digits */
@@ -586,7 +603,7 @@ void DrawHighScore()
 	Vector2D spawnPosition;
 	int i = 0;
 
-	/*while (processedScore >= 1 && i > 0)*/
+	/* while (processedScore >= 1 && i > 0) */
 	while (i < scoreDigitLimit)
 	{
 		spawnPosition = highScorePosition;
@@ -664,6 +681,21 @@ void PlayerMovement()
 {
 	player.position.x += input.x * player.moveSpeed;
 	player.position.y += input.y * player.moveSpeed;
+
+	ClampPlayerPositionToScreen();
+}
+
+void ClampPlayerPositionToScreen()
+{
+	if(player.position.x < 0)
+		player.position.x = 0;
+	else if(player.position.x > screenDimensions.x)
+		player.position.x = screenDimensions.x;
+
+	if(player.position.y < 0)
+		player.position.y = 0;
+	else if(player.position.y > screenDimensions.y)
+		player.position.y = screenDimensions.y;
 }
 
 char DealDamage(char *health)
@@ -686,14 +718,14 @@ void BulletMovement()
 void ShootSoundEffect()
 {
 	printf("ShootSoundEffect();\n");
-	al_stop_sample(&shootSoundID);
+	/* al_stop_sample(&shootSoundID); */
 	al_play_sample(shootSound, 1.0, 0.0, 1.0, ALLEGRO_PLAYMODE_ONCE, &shootSoundID);
 }
 
 void DieSoundEffect()
 {
 	printf("DieSoundEffect();\n");
-	al_stop_sample(&enemyDieSoundID);
+	/* al_stop_sample(&enemyDieSoundID); */
 	al_play_sample(enemyDieSound, 1.0, 0.0, 1.0, ALLEGRO_PLAYMODE_ONCE, &enemyDieSoundID);
 }
 
@@ -841,6 +873,8 @@ void DestroyGame()
 
 void DestroyGameWindow()
 {
+	/* BGM is an exception since I don't want to it to restart itself every restart */
+	al_destroy_sample(BGM);
 	al_destroy_display(display);
 	al_uninstall_keyboard();
 }
