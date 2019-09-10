@@ -4,6 +4,7 @@
 	Mail: asrindogan99@gmail.com 
 */
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include "allegro-5.0.10-mingw-4.7.0\include\allegro5\allegro.h"
 #include "allegro-5.0.10-mingw-4.7.0\include\allegro5\allegro_audio.h"
@@ -79,6 +80,9 @@ void DrawObject(Vector2D position, ALLEGRO_BITMAP *image, int flag);
 void DrawSizedObject(Vector2D position, ALLEGRO_BITMAP *image, int flag, float objectSizeMultiplier);
 void DrawScreen();
 void DrawScore();
+void DrawHighScore();
+void CheckHighScore();
+void GetHighScore();
 void DrawNumber(Vector2D position, int number);
 void Inputs();
 void PlayerMovement();
@@ -118,6 +122,7 @@ ALLEGRO_SAMPLE_ID enemyDieSoundID;
 ALLEGRO_BITMAP *numberTable;
 
 const char *displayName = "Syn Game";
+const char *savePath = "Save.syn";
 const Vector2D referenceScreenDimensions = {160, 90};
 Vector2D screenDimensions = {0, 0};
 Vector2D scorePosition = {0, 0};
@@ -127,6 +132,7 @@ float timeFromStart;
 const float FPS = 60;
 double deltaTime;
 unsigned int enemyRespawnCounter = 0;
+unsigned int highScore = 0;
 Vector2D input;
 byte isRestart = 0;
 byte isRunning = 1;
@@ -146,10 +152,6 @@ void Update()
 	{
 		printf("Inputs();\n");
 		Inputs();
-
-		if(al_key_down(&keyboardState, ALLEGRO_KEY_F))
-			player.score += 1000;
-			// enemies.enemyLimit++;
 
 		printf("PlayerMovement();\n");
 		PlayerMovement();
@@ -172,7 +174,7 @@ void Update()
 			player.shootCooldown -= deltaTime;
 
 		timeFromStart += deltaTime;
-		player.score = (int)(timeFromStart * timeFromStart) * player.killedEnemyCount;
+		player.score = (int)(timeFromStart * timeFromStart) * (player.killedEnemyCount + 1);
 
 		if(enemies.enemyLimit != enemyLimiter)
 		{
@@ -315,7 +317,7 @@ char InitializeGameWindow()
 
 	screenDimensions = (Vector2D){x, y};
 	scorePosition = (Vector2D){x * (float)0.05, y * (float)0.05}; 
-	highScorePosition = (Vector2D){x * (float)0.05, y * (float)0.95}; 
+	highScorePosition = (Vector2D){x * (float)0.95, y * (float)0.05}; 
 	sizeMultiplier = screenDimensions.x / referenceScreenDimensions.x;
 	display = al_create_display(screenDimensions.x, screenDimensions.y);
 	
@@ -356,6 +358,7 @@ char InitializeGame()
 	enemyDieSound = al_load_sample("Sounds/Die.wav");
 	
 	InitializeEnemies();
+	GetHighScore();
 
 	/* Player Initialization */
 	player.position.x = screenDimensions.x / 2;
@@ -553,6 +556,7 @@ void DrawScreen()
 		DrawObject(halfScreen, gameOverImage, 0);
 
 	DrawScore();
+	DrawHighScore();
 }
 
 void DrawScore()
@@ -573,6 +577,62 @@ void DrawScore()
 		DrawNumber(spawnPosition, digit);
 		i--;
 	}
+}
+
+void DrawHighScore()
+{
+	unsigned int processedScore = highScore;
+	char digit;
+	Vector2D spawnPosition;
+	int i = 0;
+
+	/*while (processedScore >= 1 && i > 0)*/
+	while (i < scoreDigitLimit)
+	{
+		spawnPosition = highScorePosition;
+		/* numberImageSize + 1 is because 1 pixel space between digits */
+		spawnPosition.x -= sizeMultiplier * (numberImageSize + 1) * i;
+		digit = processedScore % 10;
+		processedScore = (int)(processedScore / 10);
+		DrawNumber(spawnPosition, digit);
+		i++;
+	}
+}
+
+void CheckHighScore()
+{
+	FILE *saveFile;
+	printf("Checking Highscore = %d and Score = %d\n", highScore, player.score);
+	
+	if(player.score < highScore)
+		return;
+		
+	saveFile = fopen(savePath, "wb");
+	if(saveFile == NULL)
+	{
+		printf("!!!!Error Saving Highscore!!!!\n");
+		return;
+	}
+
+	highScore = player.score;
+	fwrite(&highScore, sizeof(highScore), 1, saveFile);
+	fclose(saveFile);
+}
+
+void GetHighScore()
+{
+	printf("Getting Highscore\n");
+	FILE *saveFile = fopen(savePath, "rb");
+	if(saveFile == NULL)
+	{
+		printf("!!!!Error Reading Highscore!!!!\n");
+		highScore = 0;
+		return;
+	}
+
+	fread(&highScore, sizeof(highScore), 1, saveFile);
+	fclose(saveFile);
+	printf("Get Highscore = %d\n", highScore);
 }
 
 void Inputs()
@@ -768,6 +828,7 @@ void BulletCollisions()
 
 void DestroyGame()
 {
+	CheckHighScore();
 	al_destroy_bitmap(enemyImage);
 	al_destroy_bitmap(enemyBulletImage);
 	al_destroy_bitmap(gameOverImage);

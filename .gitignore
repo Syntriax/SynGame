@@ -3,6 +3,7 @@
 *.txt
 *.a
 *.dll
+*.syn
 !allegro_acodec-5.0.10-md.dll
 !allegro_audio-5.0.10-md.dll
 !allegro_image-5.0.10-md.dll
