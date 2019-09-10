@@ -11,8 +11,9 @@
 #include "allegro-5.0.10-mingw-4.7.0\include\allegro5\allegro_image.h"
 #include "allegro-5.0.10-mingw-4.7.0\include\allegro5\allegro_primitives.h"
 #define playerSpeed 7.5
+#define initialPlayerHealth 4
 #define bulletSpeed 25
-#define numberSize 5
+#define numberImageSize 5
 #define scoreDigitLimit 10
 #define enemyLimiter 8
 #define initialEnemyLimit 3
@@ -95,7 +96,7 @@ byte isVectorExceedingLimits(Vector2D vector, Vector2D limits);
 byte CheckCollision(Vector2D *firstPos, Vector2D *secondPos, ALLEGRO_BITMAP *firstMap, ALLEGRO_BITMAP *secondMap);
 char InitializeGameWindow();
 char InitializeGame();
-char DealDamage(char *health, int damage);
+char DealDamage(char *health);
 Vector2D NormalizeVector(Vector2D vector);
 
 ALLEGRO_KEYBOARD_STATE keyboardState;
@@ -361,7 +362,7 @@ char InitializeGame()
 	player.position.y = screenDimensions.y / 2;
 	player.moveSpeed = playerSpeed;
 	player.shootPerSecond = 10;
-	player.health = 100;
+	player.health = initialPlayerHealth;
 	player.playerImage = al_load_bitmap("Images/Player.png");
 	bullets.bulletCount = 0;
 	bullets.bulletArray = (Bullet *) malloc(sizeof(Bullet) * bullets.bulletCount);
@@ -565,8 +566,8 @@ void DrawScore()
 	while (i > 0)
 	{
 		spawnPosition = scorePosition;
-		/* numberSize + 1 is because 1 pixel space between digits */
-		spawnPosition.x += sizeMultiplier * (numberSize + 1) * i;
+		/* numberImageSize + 1 is because 1 pixel space between digits */
+		spawnPosition.x += sizeMultiplier * (numberImageSize + 1) * i;
 		digit = processedScore % 10;
 		processedScore = (int)(processedScore / 10);
 		DrawNumber(spawnPosition, digit);
@@ -605,12 +606,9 @@ void PlayerMovement()
 	player.position.y += input.y * player.moveSpeed;
 }
 
-char DealDamage(char *health, int damage)
+char DealDamage(char *health)
 {
-	int healthInt = *health;
-	*health -= damage;
-
-	return healthInt <= 0;
+	return --*health <= 0;
 }
 
 void BulletMovement()
@@ -708,36 +706,30 @@ void BulletCollisions()
 	int bulletCounter = 0;
 	int enemyCounter = 0;
 	int i = 0;
-	byte isCheckPlayerEnemyInteraction = 1;
-	for (bulletCounter = 0; bulletCounter < bullets.bulletCount; bulletCounter++)
+	printf("Enemy-Bullet\n");
+	for (enemyCounter = 0; enemyCounter < enemies.enemyCount; enemyCounter++)
 	{
-		bullet = (bullets.bulletArray + bulletCounter);
-		printf("Player-Bullet\n");
-		if(bullet -> isEnemyBullet == 1 && CheckCollision(
-				&bullet -> position,
-				&player.position,
-				enemyBulletImage,
-				player.playerImage
-			))
+		printf("Enemy-Bullet|enemyCounter\n");
+		enemy = (enemies.enemyArray + enemyCounter);
+		for (bulletCounter = 0; bulletCounter < bullets.bulletCount; bulletCounter++)
 		{
-			RemoveBulletAtIndex(bulletCounter);
-			bulletCounter--;
+			bullet = (bullets.bulletArray + bulletCounter);
+			printf("Player-Bullet\n");
+			if(bullet -> isEnemyBullet == 1 && CheckCollision(
+					&bullet -> position,
+					&player.position,
+					enemyBulletImage,
+					player.playerImage
+				))
+			{
+				RemoveBulletAtIndex(bulletCounter);
+				bulletCounter--;
 
-			if(DealDamage(&player.health, 25))
-				isGameOver = 1;
-			break;
-		}
-
-		printf("Enemy-Bullet\n");
-		for (enemyCounter = 0; enemyCounter < enemies.enemyCount; enemyCounter++)
-		{
-			enemy = (enemies.enemyArray + enemyCounter);
-			printf("Enemy-Bullet|enemyCounter\n");
-			printf("Enemy Count = %d\n", enemyCounter);
-			printf("Enemy Counter = %d\n", enemies.enemyCount);
-			printf("Bullet Count = %d\n", bulletCounter);
-			printf("Bullet Counter = %d\n", bullets.bulletCount);
-			
+				if(DealDamage(&player.health))
+					isGameOver = 1;
+				continue;
+			}
+		
 			if(bullet -> isEnemyBullet == 0 && CheckCollision(
 				&bullet -> position,
 				&enemy -> position,
@@ -753,28 +745,25 @@ void BulletCollisions()
 				RemoveBulletAtIndex(bulletCounter);
 				bulletCounter--;
 				player.killedEnemyCount++;
-				break;
-			}
-
-			printf("Enemy-Player\n");
-			if(	isCheckPlayerEnemyInteraction == 1 &&
-			 	CheckCollision(
-					&enemy -> position,
-					&player.position,
-					enemyImage,
-					player.playerImage
-				))
-			{				
-				RemoveEnemyAtIndex(enemyCounter);
-				enemyCounter--;
-
-				if(DealDamage(&player.health, 25))
-					isGameOver = 1;
-				
-				isCheckPlayerEnemyInteraction = 0;
 			}
 		}
+
+		printf("Enemy-Player\n");
+		if(CheckCollision(
+				&enemy -> position,
+				&player.position,
+				enemyImage,
+				player.playerImage
+			))
+		{				
+			RemoveEnemyAtIndex(enemyCounter);
+			enemyCounter--;
+
+			if(DealDamage(&player.health))
+				isGameOver = 1;
+		}
 	}
+	
 }
 
 void DestroyGame()
