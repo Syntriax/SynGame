@@ -12,10 +12,10 @@ Exit - Escape(ESC)
 
 Settings.syn can be opened with a text editor.
 Format:
-First line: Screen Mode, 1 is Fullscreen, 0 is Windowed
-Second line: Screen Width, Windowed Mode Only
-Third line: Screen Height, Windowed Mode Only
-Fourth line: Enemy Count Limiter, there will be no more enemies than this number on the screen
+First line: Screen Mode, 1 is Fullscreen, 0 is Windowed (Default Value = 1)
+Second line: Screen Width, Windowed Mode Only (Default Value = 1600)
+Third line: Screen Height, Windowed Mode Only (Default Value = 900)
+Fourth line: Enemy Count Limiter, there will be no more enemies than this number on the screen (Default Value = 12)
 
 Exe without console window
 

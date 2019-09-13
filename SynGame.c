@@ -203,7 +203,7 @@ void Update()
 		timeSinceStart += deltaTime;
 		player.score = (int)(timeSinceStart * timeSinceStart) * (player.killedEnemyCount + 1);
 
-		/* To limit enemies on the screen */
+		/* To limit the enemies on the screen */
 		if(enemies.enemyLimit != enemyLimiter)
 		{
 			enemies.enemyLimit = initialEnemyLimit + (int)(timeSinceStart / 10);
@@ -574,15 +574,13 @@ void DrawObject(Vector2D position, ALLEGRO_BITMAP *image, int flag)
 void DrawNumber(Vector2D position, int number)
 {
 	Vector2D InstantiateSize;
-	float numberFactor;
 	InstantiateSize.x = (float)al_get_bitmap_width(numberTable);
 	InstantiateSize.y = (float)al_get_bitmap_height(numberTable);
-	numberFactor = InstantiateSize.x / numbersLength;
 
 	al_draw_scaled_bitmap(numberTable,
-		numberFactor * number, 0, numberFactor, InstantiateSize.y,
-		position.x - numberFactor / 2 * screenSizeMultiplier, position.y - InstantiateSize.y / 2 * screenSizeMultiplier, 
-		numberFactor * screenSizeMultiplier, InstantiateSize.y * screenSizeMultiplier, 0);
+		numberImageSize * number, 0, numberImageSize, InstantiateSize.y,
+		position.x - numberImageSize / 2 * screenSizeMultiplier, position.y - InstantiateSize.y / 2 * screenSizeMultiplier, 
+		numberImageSize * screenSizeMultiplier, InstantiateSize.y * screenSizeMultiplier, 0);
 }
 
 void DrawSizedObject(Vector2D position, ALLEGRO_BITMAP *image, int flag, float objectscreenSizeMultiplier)
