@@ -11,7 +11,8 @@ Restart - R
 Exit - Escape(ESC)
 
 Settings.syn can be opened with a text editor.
-Format:
+
+Settings Format:
 First line: Screen Mode, 1 is Fullscreen, 0 is Windowed (Default Value = 1)
 Second line: Screen Width, Windowed Mode Only (Default Value = 1600)
 Third line: Screen Height, Windowed Mode Only (Default Value = 900)
