@@ -1,5 +1,5 @@
 # SynGame
-Simple Shoot 'Em Up game.
+Simple Shoot 'Em Up game for Windows.
 
 Keys:\
 Move Up - Up Arrow\

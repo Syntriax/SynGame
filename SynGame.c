@@ -667,14 +667,12 @@ void DrawTimer()
 	char digit;
 	Vector2D spawnPosition;
 	int i = -timerDigitLimit / 2;
+	spawnPosition = timerPosition;
 
-	/* while (processedScore >= 1 && i > 0) */
 	while (i < 0)
 	{
-
-		spawnPosition = timerPosition;
 		/* numberImageSize + 1 is because 1 pixel space between digits */
-		spawnPosition.x -= screenSizeMultiplier * (numberImageSize + 1) * i;
+		spawnPosition.x = timerPosition.x - screenSizeMultiplier * (numberImageSize + 1) * i;
 		
 		digit = seconds % 10;
 		seconds = (int)(seconds / 10);
@@ -682,18 +680,15 @@ void DrawTimer()
 		i++;
 	}
 
-	spawnPosition = timerPosition;
 	/* numberImageSize + 1 is because 1 pixel space between digits */
-	spawnPosition.x -= screenSizeMultiplier * (numberImageSize + 1) * i;
+	spawnPosition.x = timerPosition.x - screenSizeMultiplier * (numberImageSize + 1) * i;
 	DrawNumber(spawnPosition, colon);
 	i++;
 	
 	while (i < (timerDigitLimit / 2) + 1)
 	{
-
-		spawnPosition = timerPosition;
 		/* numberImageSize + 1 is because 1 pixel space between digits */
-		spawnPosition.x -= screenSizeMultiplier * (numberImageSize + 1) * i;
+		spawnPosition.x = timerPosition.x - screenSizeMultiplier * (numberImageSize + 1) * i;
 		
 		if(i == 0)
 		{
@@ -857,8 +852,10 @@ void PlayerShoot()
 	shootDir.y = 0;
 	
 	player.shootCooldown = 1 / (float)player.shootPerSecond;
+
 	bullets.bulletCount++;
 	bullets.bulletArray = (Bullet *) realloc(bullets.bulletArray, sizeof(Bullet) * bullets.bulletCount);
+
 	newBullet = (bullets.bulletArray + bullets.bulletCount - 1);
 	newBullet -> position = player.position;
 	newBullet -> position.x += offset; 
@@ -881,6 +878,7 @@ void EnemyShoot()
 	{
 		srand(time(0) + enemyRespawnCounter++);
 		enemy = (enemies.enemyArray + i);
+
 		if(enemy -> fireCooldown > 0.0)
 			enemy -> fireCooldown -= deltaTime;
 		else
