@@ -15,6 +15,7 @@ Format:
 First line: Screen Mode, 1 is Fullscreen, 0 is Windowed
 Second line: Screen Width, Windowed Mode Only
 Third line: Screen Height, Windowed Mode Only
+Fourth line: Enemy Count Limiter, there will be no more enemies than this number on the screen
 
 Exe without console window
 

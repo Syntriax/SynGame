@@ -30,7 +30,6 @@
 #define numberImageSize 5
 #define scoreDigitLimit 11
 #define timerDigitLimit 4
-#define enemyLimiter 8
 #define initialEnemyLimit 3
 #define sampleCount 3
 #define colon 10
@@ -161,6 +160,7 @@ const float FPS = 60;
 double deltaTime;
 unsigned int enemyRespawnCounter = 0;
 unsigned int highScore = 0;
+int enemyLimiter = 12;
 Vector2D input;
 byte isRestart 	= 0;
 byte isRunning 	= 1;
@@ -758,13 +758,13 @@ void GetSettings()
 			printf("!!!!Error Creating Settings!!!!\n");
 		else
 		{
-			fprintf(settingsFile, settingsFormat, isFullscreen, settingsWidth, settingsHeight);
+			fprintf(settingsFile, settingsFormat, isFullscreen, settingsWidth, settingsHeight, enemyLimiter);
 			fclose(settingsFile);
 		}
 		return;
 	}
 
-	fscanf(settingsFile, settingsFormat, &isFullscreen, &settingsWidth, &settingsHeight);
+	fscanf(settingsFile, settingsFormat, &isFullscreen, &settingsWidth, &settingsHeight, &enemyLimiter);
 	fclose(settingsFile);
 }
 
