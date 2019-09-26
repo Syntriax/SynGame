@@ -95,7 +95,6 @@ void SpawnEnemies();
 void CheckBullets();
 void RemoveBulletAtIndex(int index);
 void RemoveEnemyAtIndex(int index);
-void InitializeEnemies();
 void CheckEnemies();
 void MoveEnemies();
 void LimitEnemies();
@@ -130,6 +129,7 @@ float VectorDistanceBetween(Vector2D vectorFirst, Vector2D vectorSecond);
 byte isVectorExceedingLimits(Vector2D vector, Vector2D limits);
 byte CheckCollision(Vector2D *firstPos, Vector2D *secondPos, Image *firstMap, Image *secondMap);
 
+char InitializeEnemies();
 char InitializeGameWindow();
 char InitializeGame();
 char DealDamage(char *health);
@@ -443,15 +443,24 @@ char InitializeGameWindow()
 	
 	/* BGM is an exception since I don't want to it to restart itself every restart */
 	BGM = al_load_sample(bgmSoundPath);
+	
+	if(BGM == NULL)
+		return 0;
+	
 	al_play_sample(BGM, 1.0, 0.0, 1.0, ALLEGRO_PLAYMODE_LOOP, NULL);
+	return 1;
 }
 
 char InitializeGame()
 {
 	shootSound 		= al_load_sample(shootSoundPath);
 	enemyDieSound 	= al_load_sample(dieSoundPath);
+
+	if(shootSound == NULL || enemyDieSound == NULL)
+		return 0;
 	
-	InitializeEnemies();
+	if(!InitializeEnemies())
+		return 0;
 	GetHighScore();
 
 	/* Player Initialization */
@@ -480,7 +489,7 @@ char InitializeGame()
 	return 1;
 }
 
-void InitializeEnemies()
+char InitializeEnemies()
 {
 	enemies.enemyLimit = initialEnemyLimit;
 	enemies.enemyCount = 0;
@@ -490,8 +499,15 @@ void InitializeEnemies()
 	numberTable 		= InitImage(numbersImagePath);
 	enemyBulletImage 	= InitImage(bulletImagePath);
 	gameOverImage 		= InitImage(gameOverImagePath);
+	
+	if(	enemyImage.bitmap 		== NULL ||
+		numberTable.bitmap 		== NULL ||
+		enemyBulletImage.bitmap == NULL ||
+		gameOverImage.bitmap 	== NULL	)
+	return 0;
 
 	SpawnEnemies();
+	return 1;
 }
 
 void SpawnEnemies()
@@ -898,15 +914,15 @@ void DieSoundEffect()
 void PlayerShootCheck()
 {
 	if(player.shootCooldown < 0.0f)
+	{
+		if(al_key_down(&keyboardState, ALLEGRO_KEY_SPACE))
 		{
-			if(al_key_down(&keyboardState, ALLEGRO_KEY_SPACE))
-			{
-				printf("PlayerShoot();\n");
-				PlayerShoot();
-			}
+			printf("PlayerShoot();\n");
+			PlayerShoot();
 		}
-		else
-			player.shootCooldown -= deltaTime;
+	}
+	else
+		player.shootCooldown -= deltaTime;
 }
 
 void PlayerShoot()
