@@ -1,6 +1,6 @@
 /* 
 	Author: Asrın "Syntriax" Doğan
-	Date: 10.09.2019
+	Start: 05.09.2019
 	Mail: asrindogan99@gmail.com 
 
 	Simple Shoot 'Em Up game. 
@@ -88,9 +88,10 @@ void SpawnEnemies();
 void CheckBullets();
 void RemoveBulletAtIndex(int index);
 void RemoveEnemyAtIndex(int index);
+void InitializeEnemies();
 void CheckEnemies();
 void MoveEnemies();
-void InitializeEnemies();
+void LimitEnemies();
 void DestroyGame();
 void DrawObject(Vector2D position, ALLEGRO_BITMAP *image, int flag);
 void DrawSizedObject(Vector2D position, ALLEGRO_BITMAP *image, int flag, float objectscreenSizeMultiplier);
@@ -101,6 +102,7 @@ void DrawTimer();
 void CheckHighScore();
 void GetHighScore();
 void GetSettings();
+void CalculateScore();
 void DrawNumber(Vector2D position, int number);
 void Inputs();
 void PlayerMovement();
@@ -111,15 +113,20 @@ void DieSoundEffect();
 void PlayerShoot();
 void EnemyShoot();
 void BulletCollisions();
+void PlayerShootCheck();
 void Update();
 void DestroyGameWindow();
+
 float VectorMagnitude(Vector2D vector);
 float VectorDistanceBetween(Vector2D vectorFirst, Vector2D vectorSecond);
+
 byte isVectorExceedingLimits(Vector2D vector, Vector2D limits);
 byte CheckCollision(Vector2D *firstPos, Vector2D *secondPos, ALLEGRO_BITMAP *firstMap, ALLEGRO_BITMAP *secondMap);
+
 char InitializeGameWindow();
 char InitializeGame();
 char DealDamage(char *health);
+
 Vector2D NormalizeVector(Vector2D vector);
 
 ALLEGRO_KEYBOARD_STATE keyboardState;
@@ -189,28 +196,16 @@ void Update()
 		printf("BulletCollisions();\n");
 		BulletCollisions();
 
-		if(player.shootCooldown < 0.0f)
-		{
-			if(al_key_down(&keyboardState, ALLEGRO_KEY_SPACE))
-			{
-				printf("PlayerShoot();\n");
-				PlayerShoot();
-			}
-		}
-		else
-			player.shootCooldown -= deltaTime;
+		printf("PlayerShootCheck();\n");
+		PlayerShootCheck();
+
+		printf("LimitEnemies();\n");
+		LimitEnemies();
 
 		timeSinceStart += deltaTime;
-		player.score = (int)(timeSinceStart * timeSinceStart) * (player.killedEnemyCount + 1);
 
-		/* To limit the enemies on the screen */
-		if(enemies.enemyLimit != enemyLimiter)
-		{
-			enemies.enemyLimit = initialEnemyLimit + (int)(timeSinceStart / 10);
-			
-			if(enemies.enemyCount > enemyLimiter)
-				enemies.enemyLimit = enemyLimiter;
-		}
+		printf("CalculateScore();\n");
+		CalculateScore();
 	}
 	else if(al_key_down(&keyboardState, ALLEGRO_KEY_R))
 		isRestart = 1;
@@ -231,7 +226,6 @@ void Update()
 	printf("DrawScreen();\n");
 	DrawScreen();
 	
-
 	al_flip_display();
 }
 
@@ -267,7 +261,8 @@ int main(int argc, char **argv)
 		}
 
 		DestroyGame();
-	} while (isRestart);
+	} 
+	while (isRestart);
 
 	DestroyGameWindow();
 	
@@ -399,9 +394,9 @@ char InitializeGameWindow()
 	al_set_window_title(display, displayName);
 
 	backgroundColor.a = 1;
-	backgroundColor.a = 0;
-	backgroundColor.a = 0;
-	backgroundColor.a = 0;
+	backgroundColor.r = .1;
+	backgroundColor.g = .1;
+	backgroundColor.b = .1;
 	
 	/* BGM is an exception since I don't want to it to restart itself every restart */
 	BGM = al_load_sample("Sounds/Background.wav");
@@ -469,7 +464,7 @@ void SpawnEnemies()
 	{
 		/* enemyRespawnCounter is just for making the value of rand() more randomized */
     	srand(time(0) + enemyRespawnCounter);
-		randomNumber = rand() * enemies.enemyCount;
+		randomNumber = rand();
 		enemies.enemyCount++;
 		enemies.enemyArray = (Enemy *) realloc(enemies.enemyArray, sizeof(Enemy) * enemies.enemyCount);
 
@@ -488,7 +483,7 @@ void SpawnEnemies()
 		enemySpawnVector.y = enemyVelocity.y > 0 ? 0 : screenDimensions.y;
 
 		enemy -> position = enemySpawnVector;
-		enemy -> fireCooldown = 01.0 / (rand() % 5) + 2.0;
+		enemy -> fireCooldown = 1.0 / (rand() % 5) + 2.0;
 
 		enemyRespawnCounter++;
 	}
@@ -559,6 +554,18 @@ void MoveEnemies()
 		(enemies.enemyArray + i) -> position.y += velocity.y * speed;
 	}
 }
+
+void LimitEnemies()
+{
+	if(enemies.enemyLimit != enemyLimiter)
+	{
+		enemies.enemyLimit = initialEnemyLimit + (int)(timeSinceStart / 10);
+		
+		if(enemies.enemyCount > enemyLimiter)
+			enemies.enemyLimit = enemyLimiter;
+	}
+}
+
 void DrawObject(Vector2D position, ALLEGRO_BITMAP *image, int flag)
 {
 	Vector2D InstantiateSize;
@@ -571,6 +578,11 @@ void DrawObject(Vector2D position, ALLEGRO_BITMAP *image, int flag)
 		InstantiateSize.x * screenSizeMultiplier, InstantiateSize.y * screenSizeMultiplier, flag);
 }
 
+/* 
+	Allegra Fonts is not working so I use this for displaying numbers 
+	Special Characters:
+	10 = : 
+*/
 void DrawNumber(Vector2D position, int number)
 {
 	Vector2D InstantiateSize;
@@ -761,6 +773,11 @@ void GetSettings()
 	fclose(settingsFile);
 }
 
+void CalculateScore()
+{
+	player.score = (int)(timeSinceStart * timeSinceStart) * (player.killedEnemyCount + 1);
+}
+
 void Inputs()
 {
 	input.x = 0;
@@ -836,6 +853,20 @@ void DieSoundEffect()
 	printf("DieSoundEffect();\n");
 	/* al_stop_sample(&enemyDieSoundID); */
 	al_play_sample(enemyDieSound, 1.0, 0.0, 1.0, ALLEGRO_PLAYMODE_ONCE, &enemyDieSoundID);
+}
+
+void PlayerShootCheck()
+{
+	if(player.shootCooldown < 0.0f)
+		{
+			if(al_key_down(&keyboardState, ALLEGRO_KEY_SPACE))
+			{
+				printf("PlayerShoot();\n");
+				PlayerShoot();
+			}
+		}
+		else
+			player.shootCooldown -= deltaTime;
 }
 
 void PlayerShoot()
