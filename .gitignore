@@ -4,13 +4,13 @@
 *.a
 *.dll
 *.syn
-!allegro_acodec-5.0.10-md.dll
 !allegro_audio-5.0.10-md.dll
+!allegro_acodec-5.0.10-md.dll
 !allegro_image-5.0.10-md.dll
 !allegro_primitives-5.0.10-md.dll
 !allegro-5.0.10-md.dll
 !liballegro_audio-5.0.10-md.a
 !liballegro_acodec-5.0.10-md.a
 !liballegro_image-5.0.10-md.a
-!liballegro_dialog-5.0.10-md.a
 !liballegro_primitives-5.0.10-md.a
+!liballegro-5.0.10-md.a
