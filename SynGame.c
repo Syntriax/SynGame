@@ -43,6 +43,7 @@ typedef struct
 
 typedef struct
 {
+	Vector2D originalSize;
 	Vector2D size;
 	ALLEGRO_BITMAP *bitmap;
 } Image;
@@ -140,14 +141,15 @@ Vector2D NormalizeVector(Vector2D vector);
 ALLEGRO_KEYBOARD_STATE keyboardState;
 ALLEGRO_DISPLAY_MODE disp_data;
 ALLEGRO_COLOR backgroundColor;
-ALLEGRO_DISPLAY *display 				= NULL;
-ALLEGRO_EVENT_QUEUE *event_queue 		= NULL;
-ALLEGRO_TIMER *timer 					= NULL;
+ALLEGRO_DISPLAY *display 			= NULL;
+ALLEGRO_EVENT_QUEUE *event_queue 	= NULL;
+ALLEGRO_TIMER *timer				= NULL;
+
 Image gameOverImage;
 
 ALLEGRO_SAMPLE *BGM = NULL;
 
-ALLEGRO_SAMPLE *shootSound 		= NULL;
+ALLEGRO_SAMPLE *shootSound = NULL;
 ALLEGRO_SAMPLE_ID shootSoundID;
 
 Image enemyImage;
@@ -157,36 +159,45 @@ ALLEGRO_SAMPLE_ID enemyDieSoundID;
 
 Image numberTable;
 
-const char *playerImagePath = "Images/Player.png";
-const char *enemyImagePath = "Images/Enemy.png";
-const char *bulletImagePath = "Images/Bullet.png";
-const char *gameOverImagePath = "Images/GameOver.png";
-const char *numbersImagePath = "Images/Numbers.png";
+const char *playerImagePath 	= "Images/Player.png";
+const char *enemyImagePath 		= "Images/Enemy.png";
+const char *bulletImagePath 	= "Images/Bullet.png";
+const char *gameOverImagePath 	= "Images/GameOver.png";
+const char *numbersImagePath 	= "Images/Numbers.png";
 
-const char *dieSoundPath = "Sounds/Die.wav";
-const char *bgmSoundPath = "Sounds/Background.wav";
-const char *shootSoundPath = "Sounds/Shoot.wav";
+const char *dieSoundPath 	= "Sounds/Die.wav";
+const char *bgmSoundPath 	= "Sounds/Background.wav";
+const char *shootSoundPath 	= "Sounds/Shoot.wav";
 
 const char *displayName = "Syn Game";
 const char *savePath = "Save.syn";
 const char *settingsPath = "Settings.syn";
 const char *settingsFormat = "%d\n%d\n%d";
+
 int isFullscreen = 1;
 int settingsWidth = 1600;
 int settingsHeight = 900;
+
 const Vector2D referenceScreenDimensions = {160, 90};
 Vector2D screenDimensions 	= {0, 0};
 Vector2D scorePosition 		= {0, 0};
 Vector2D highScorePosition 	= {0, 0};
 Vector2D timerPosition 		= {0, 0};
+
 float screenSizeMultiplier; 
 float timeSinceStart;
+
 const float FPS = 60;
+
 double deltaTime;
+
 unsigned int enemyRespawnCounter = 0;
 unsigned int highScore = 0;
+
 int enemyLimiter = 12;
+
 Vector2D input;
+
 byte isRestart 	= 0;
 byte isRunning 	= 1;
 byte isGameOver = 0;
@@ -288,6 +299,20 @@ int main(int argc, char **argv)
 	return 0;
 }
 
+Image InitImage(const char *path)
+{
+	Image result;
+	result.bitmap = al_load_bitmap(path);
+
+	result.originalSize.x = al_get_bitmap_width(result.bitmap);
+	result.originalSize.y = al_get_bitmap_height(result.bitmap);
+
+	result.size.x = result.originalSize.x * screenSizeMultiplier;
+	result.size.y = result.originalSize.y * screenSizeMultiplier;
+	
+	return result;
+}
+
 Vector2D NormalizeVector(Vector2D vector)
 {
 	Vector2D normalizedVector;
@@ -324,19 +349,13 @@ byte isVectorExceedingLimits(Vector2D vector, Vector2D limits)
 /* 
 	Gets the shortest dimensions of both images, sums these dimension and divides by 2 to get minimum accepted distance.
 	And compares the distance between those objects to the minimum distancce to check if they're colliding.
-	It's the most optimized way I can think of for a game like this.
- */
+	It's the most simple and optimized way I can think of for a game like this.
+*/
 byte CheckCollision(Vector2D *firstPos, Vector2D *secondPos, Image *firstMap, Image *secondMap)
 {
-	// Vector2D firstMap -> size;
-	// Vector2D secondMap -> size;
 	byte result;
 	float minDistance;
 	float distance;
-	// firstMap -> size.x = (float)al_get_bitmap_width(firstMap);
-	// firstMap -> size.y = (float)al_get_bitmap_height(firstMap);
-	// secondMap -> size.x = (float)al_get_bitmap_width(secondMap);
-	// secondMap -> size.y = (float)al_get_bitmap_height(secondMap);
 	
 	minDistance = firstMap -> size.x > firstMap -> size.y ? 
 		firstMap -> size.y : 
@@ -346,7 +365,7 @@ byte CheckCollision(Vector2D *firstPos, Vector2D *secondPos, Image *firstMap, Im
 		secondMap -> size.y : 
 		secondMap -> size.x;
 
-	minDistance *= screenSizeMultiplier * 0.5f;
+	minDistance *= 0.5f;
 
 	distance = VectorDistanceBetween(*firstPos, *secondPos);
 
@@ -384,9 +403,10 @@ char InitializeGameWindow()
 	}
 
 	screenDimensions 	= (Vector2D){x, y};
-	scorePosition 		= (Vector2D){x * (float)0.05, y * (float)0.05}; 
-	highScorePosition 	= (Vector2D){x * (float)0.95, y * (float)0.05}; 
-	timerPosition 		= (Vector2D){x * (float)0.5 , y * (float)0.95}; 
+
+	scorePosition 		= (Vector2D){x * (float)0.05, y * (float)0.05}; /* Upper Left Position */
+	highScorePosition 	= (Vector2D){x * (float)0.95, y * (float)0.05}; /* Upper Right Position */
+	timerPosition 		= (Vector2D){x * (float)0.5 , y * (float)0.95}; /* Bottom Center Position */
 
 	screenSizeMultiplier = screenDimensions.x / referenceScreenDimensions.x;
 	display = al_create_display(screenDimensions.x, screenDimensions.y);
@@ -465,20 +485,13 @@ void InitializeEnemies()
 	enemies.enemyLimit = initialEnemyLimit;
 	enemies.enemyCount = 0;
 	enemies.enemyArray = (Enemy *) malloc(sizeof(Enemy) * enemies.enemyCount);
-	enemyImage = InitImage(enemyImagePath);
-	numberTable = InitImage(numbersImagePath);
-	enemyBulletImage = InitImage(bulletImagePath);
-	gameOverImage = InitImage(gameOverImagePath);
-	SpawnEnemies();
-}
 
-Image InitImage(const char *path)
-{
-	Image result;
-	result.bitmap = al_load_bitmap(path);
-	result.size.x = al_get_bitmap_width(result.bitmap);
-	result.size.y = al_get_bitmap_height(result.bitmap);
-	return result;
+	enemyImage 			= InitImage(enemyImagePath);
+	numberTable 		= InitImage(numbersImagePath);
+	enemyBulletImage 	= InitImage(bulletImagePath);
+	gameOverImage 		= InitImage(gameOverImagePath);
+
+	SpawnEnemies();
 }
 
 void SpawnEnemies()
@@ -523,11 +536,10 @@ void SpawnEnemies()
 
 void CheckBullets()
 {
-	int i = 0;
-	int j = 0;
+	int i;
+	int j;
 
-	for (; i < bullets.bulletCount; i++)
-	{
+	for (i = 0; i < bullets.bulletCount; i++)
 		if(isVectorExceedingLimits((bullets.bulletArray + i) -> position, screenDimensions))
 		{
 			for (j = i; j < bullets.bulletCount - 1; j++)
@@ -536,7 +548,6 @@ void CheckBullets()
 			bullets.bulletCount--;
 			bullets.bulletArray = (Bullet *) realloc(bullets.bulletArray, sizeof(Bullet) * bullets.bulletCount);
 		}
-	}
 }
 
 void RemoveBulletAtIndex(int index)
@@ -563,9 +574,9 @@ void RemoveEnemyAtIndex(int index)
 
 void CheckEnemies()
 {
-	int i = 0;
+	int i;
 
-	for (; i < enemies.enemyCount; i++)
+	for (i = 0; i < enemies.enemyCount; i++)
 		if(isVectorExceedingLimits((enemies.enemyArray + i) -> position, screenDimensions))
 			RemoveEnemyAtIndex(i);
 			
@@ -574,11 +585,11 @@ void CheckEnemies()
 
 void MoveEnemies()
 {
-	int i = 0;
 	Vector2D velocity;
 	float speed;
+	int i;
 
-	for (; i < enemies.enemyCount; i++)
+	for (i = 0; i < enemies.enemyCount; i++)
 	{
 		speed = (enemies.enemyArray + i) -> moveSpeed;
 		velocity = (enemies.enemyArray + i) -> velocity;
@@ -601,17 +612,14 @@ void LimitEnemies()
 void DrawObject(Vector2D position, Image *image, int flag)
 {
 	Vector2D InstantiateSize;
+	Vector2D originalSize;
 	InstantiateSize = image -> size;
-	/*
-		InstantiateSize.x = (float)al_get_bitmap_width(image);
-		InstantiateSize.y = (float)al_get_bitmap_height(image);
-		InstantiateSize.x = image -> size.x;
-		InstantiateSize.y = image -> size.y;
-	*/
+	originalSize = image -> originalSize;
+
 	al_draw_scaled_bitmap(image -> bitmap,
-		0, 0, InstantiateSize.x, InstantiateSize.y,
-		position.x - InstantiateSize.x / 2 * screenSizeMultiplier, position.y - InstantiateSize.y / 2 * screenSizeMultiplier, 
-		InstantiateSize.x * screenSizeMultiplier, InstantiateSize.y * screenSizeMultiplier, flag);
+		0, 0, originalSize.x, originalSize.y,
+		position.x - InstantiateSize.x / 2, position.y - InstantiateSize.y / 2, 
+		InstantiateSize.x, InstantiateSize.y, flag);
 }
 
 /* 
@@ -621,12 +629,15 @@ void DrawObject(Vector2D position, Image *image, int flag)
 */
 void DrawNumber(Vector2D position, int number)
 {
-	Vector2D InstantiateSize = numberTable.size;
+	Vector2D InstantiateSize;
+	Vector2D originalSize;
+	InstantiateSize = numberTable.size;	
+	originalSize = numberTable.originalSize;
 
 	al_draw_scaled_bitmap(numberTable.bitmap,
-		numberImageSize * number, 0, numberImageSize, InstantiateSize.y,
-		position.x - numberImageSize / 2 * screenSizeMultiplier, position.y - InstantiateSize.y / 2 * screenSizeMultiplier, 
-		numberImageSize * screenSizeMultiplier, InstantiateSize.y * screenSizeMultiplier, 0);
+		numberImageSize * number, 0, numberImageSize, originalSize.y,
+		position.x - numberImageSize / 2 * screenSizeMultiplier, position.y - InstantiateSize.y / 2, 
+		numberImageSize * screenSizeMultiplier, InstantiateSize.y, 0);
 }
 
 void DrawSizedObject(Vector2D position, Image *image, int flag, float objectscreenSizeMultiplier)
@@ -670,10 +681,9 @@ void DrawScore()
 	unsigned int processedScore = player.score;
 	char digit;
 	Vector2D spawnPosition;
-	int i = scoreDigitLimit - 1;
+	int i;
 
-	/* while (processedScore >= 1 && i > 0) */
-	while (i >= 0)
+	for(i = scoreDigitLimit - 1; i >= 0; i--)
 	{
 		spawnPosition = scorePosition;
 		/* numberImageSize + 1 is because 1 pixel space between digits */
@@ -681,7 +691,6 @@ void DrawScore()
 		digit = processedScore % 10;
 		processedScore = (int)(processedScore / 10);
 		DrawNumber(spawnPosition, digit);
-		i--;
 	}
 }
 
@@ -690,10 +699,9 @@ void DrawHighScore()
 	unsigned int processedScore = highScore;
 	char digit;
 	Vector2D spawnPosition;
-	int i = 0;
+	int i;
 
-	/* while (processedScore >= 1 && i > 0) */
-	while (i < scoreDigitLimit)
+	for(i = 0; i < scoreDigitLimit; i++)
 	{
 		spawnPosition = highScorePosition;
 		/* numberImageSize + 1 is because 1 pixel space between digits */
@@ -701,7 +709,6 @@ void DrawHighScore()
 		digit = processedScore % 10;
 		processedScore = (int)(processedScore / 10);
 		DrawNumber(spawnPosition, digit);
-		i++;
 	}
 }
 
@@ -865,8 +872,8 @@ char DealDamage(char *health)
 void BulletMovement()
 {
 	Bullet *bullet;
-	int i = 0;
-	for (; i < bullets.bulletCount; i++)
+	int i;
+	for (i = 0; i < bullets.bulletCount; i++)
 	{
 		bullet = (bullets.bulletArray + i);
 		bullet -> position.x += bullet -> velocity.x; 
@@ -906,7 +913,7 @@ void PlayerShoot()
 {
 	Vector2D shootDir;
 	Bullet *newBullet;
-	float offset = (player.image.size.x + enemyBulletImage.size.x * 2.0 * screenSizeMultiplier);
+	float offset = (player.image.size.x + enemyBulletImage.size.x * 2.0);
 	
 	if(player.lookDirection != 1)
 		offset = -offset;
@@ -936,7 +943,7 @@ void EnemyShoot()
 	Enemy *enemy;
 	Bullet *bullet;
 	int i;
-	float offset = (player.image.size.x + enemyBulletImage.size.x * 2.0 * screenSizeMultiplier);
+	float offset = (player.image.size.x + enemyBulletImage.size.x * 2.0);
 
 	for (i = 0; i < enemies.enemyCount; i++)
 	{
