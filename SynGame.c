@@ -23,6 +23,7 @@
 #include "allegro\include\allegro5\allegro_acodec.h"
 #include "allegro\include\allegro5\allegro_image.h"
 #include "allegro\include\allegro5\allegro_primitives.h"
+
 #define playerSpeed 0.75
 #define enemySpeed 0.1
 #define initialPlayerHealth 4
@@ -91,6 +92,12 @@ struct
     Image image;
 } player;
 
+char InitializeGameWindow();
+char InitializeGame();
+char InitializeEnemies();
+char DealDamage(char *health);
+
+void Update();
 void SpawnEnemies();
 void CheckBullets();
 void RemoveBulletAtIndex(int index);
@@ -98,8 +105,8 @@ void RemoveEnemyAtIndex(int index);
 void CheckEnemies();
 void MoveEnemies();
 void LimitEnemies();
-void DestroyGame();
 void DrawObject(Vector2D position, Image *image, int flag);
+void DrawNumber(Vector2D position, int number);
 void DrawSizedObject(Vector2D position, Image *image, int flag, float objectscreenSizeMultiplier);
 void DrawScreen();
 void DrawScore();
@@ -109,38 +116,33 @@ void CheckHighScore();
 void GetHighScore();
 void GetSettings();
 void CalculateScore();
-void DrawNumber(Vector2D position, int number);
 void Inputs();
 void PlayerMovement();
 void ClampPlayerPositionToScreenDimensions();
-void BulletMovement();
 void ShootSoundEffect();
 void DieSoundEffect();
+void PlayerShootCheck();
 void PlayerShoot();
 void EnemyShoot();
+void BulletMovement();
 void BulletCollisions();
-void PlayerShootCheck();
-void Update();
+void DestroyGame();
 void DestroyGameWindow();
-
-float VectorMagnitude(Vector2D vector);
-float VectorDistanceBetween(Vector2D vectorFirst, Vector2D vectorSecond);
 
 byte isVectorExceedingLimits(Vector2D vector, Vector2D limits);
 byte CheckCollision(Vector2D *firstPos, Vector2D *secondPos, Image *firstMap, Image *secondMap);
 
-char InitializeEnemies();
-char InitializeGameWindow();
-char InitializeGame();
-char DealDamage(char *health);
-
-Image InitImage(const char *path);
+float VectorMagnitude(Vector2D vector);
+float VectorDistanceBetween(Vector2D vectorFirst, Vector2D vectorSecond);
 
 Vector2D NormalizeVector(Vector2D vector);
+
+Image InitImage(const char *path);
 
 ALLEGRO_KEYBOARD_STATE keyboardState;
 ALLEGRO_DISPLAY_MODE disp_data;
 ALLEGRO_COLOR backgroundColor;
+
 ALLEGRO_DISPLAY *display            = NULL;
 ALLEGRO_EVENT_QUEUE *event_queue    = NULL;
 ALLEGRO_TIMER *timer                = NULL;
@@ -154,7 +156,7 @@ ALLEGRO_SAMPLE_ID shootSoundID;
 
 Image enemyImage;
 Image enemyBulletImage;
-ALLEGRO_SAMPLE *enemyDieSound       = NULL;
+ALLEGRO_SAMPLE *enemyDieSound = NULL;
 ALLEGRO_SAMPLE_ID enemyDieSoundID;
 
 Image numberTable;
@@ -169,10 +171,10 @@ const char *dieSoundPath    = "Sounds/Die.wav";
 const char *bgmSoundPath    = "Sounds/Background.wav";
 const char *shootSoundPath  = "Sounds/Shoot.wav";
 
-const char *displayName = "Syn Game";
-const char *savePath = "Save.syn";
-const char *settingsPath = "Settings.syn";
-const char *settingsFormat = "%d\n%d\n%d";
+const char *displayName     = "Syn Game";
+const char *savePath        = "Save.syn";
+const char *settingsPath    = "Settings.syn";
+const char *settingsFormat  = "%d\n%d\n%d";
 
 int isFullscreen = 1;
 int settingsWidth = 1600;
@@ -316,7 +318,9 @@ Image InitImage(const char *path)
 Vector2D NormalizeVector(Vector2D vector)
 {
     Vector2D normalizedVector;
-    float magnitude = sqrt(vector.x * vector.x + vector.y * vector.y);
+    float magnitude;
+
+    magnitude = sqrt(vector.x * vector.x + vector.y * vector.y);
         
     if(vector.x == 0.0 && vector.y == 0.0)
         return vector;
@@ -375,8 +379,10 @@ byte CheckCollision(Vector2D *firstPos, Vector2D *secondPos, Image *firstMap, Im
 
 char InitializeGameWindow()
 {
-    float x = 0.0f;
-    float y = 0.0f;
+    float x;
+    float y;
+    x = 0.0f;
+    y = 0.0f;
 
     if(!al_init() || 
         !al_init_primitives_addon() || 
@@ -510,6 +516,11 @@ char InitializeEnemies()
     return 1;
 }
 
+char DealDamage(char *health)
+{
+    return --*health <= 0;
+}
+
 void SpawnEnemies()
 {
     Vector2D enemySpawnVector;
@@ -629,6 +640,7 @@ void DrawObject(Vector2D position, Image *image, int flag)
 {
     Vector2D InstantiateSize;
     Vector2D originalSize;
+
     InstantiateSize = image -> size;
     originalSize = image -> originalSize;
 
@@ -647,6 +659,7 @@ void DrawNumber(Vector2D position, int number)
 {
     Vector2D InstantiateSize;
     Vector2D originalSize;
+
     InstantiateSize = numberTable.size; 
     originalSize = numberTable.originalSize;
 
@@ -659,7 +672,9 @@ void DrawNumber(Vector2D position, int number)
 void DrawSizedObject(Vector2D position, Image *image, int flag, float objectscreenSizeMultiplier)
 {
     Vector2D InstantiateSize;
-    float sizeFactor = screenSizeMultiplier * objectscreenSizeMultiplier;
+    float sizeFactor;
+
+    sizeFactor = screenSizeMultiplier * objectscreenSizeMultiplier;
     InstantiateSize = image -> size;
         
     al_draw_scaled_bitmap(image -> bitmap,
@@ -670,8 +685,9 @@ void DrawSizedObject(Vector2D position, Image *image, int flag, float objectscre
 
 void DrawScreen()
 {
-    int i = 0;
-    Vector2D halfScreen = {screenDimensions.x / 2, screenDimensions.y / 2};
+    int i;
+    Vector2D halfScreen;
+    halfScreen = (Vector2D){screenDimensions.x / 2, screenDimensions.y / 2};
 
     /* Enemy Draw */
     for (i = 0; i < enemies.enemyCount; i++)
@@ -694,10 +710,12 @@ void DrawScreen()
 
 void DrawScore()
 {
-    unsigned int processedScore = player.score;
+    unsigned int processedScore;
     char digit;
     Vector2D spawnPosition;
     int i;
+
+    processedScore = player.score;
 
     for(i = scoreDigitLimit - 1; i >= 0; i--)
     {
@@ -712,10 +730,12 @@ void DrawScore()
 
 void DrawHighScore()
 {
-    unsigned int processedScore = highScore;
+    unsigned int processedScore;
     char digit;
     Vector2D spawnPosition;
     int i;
+
+    processedScore = highScore;
 
     for(i = 0; i < scoreDigitLimit; i++)
     {
@@ -730,12 +750,16 @@ void DrawHighScore()
 
 void DrawTimer()
 {
-    int seconds = (int)timeSinceStart % 60;
-    int minutes = (timeSinceStart - seconds) / 60;
+    int seconds;
+    int minutes;
     char digit;
     Vector2D spawnPosition;
-    int i = -timerDigitLimit / 2;
+    int i;
+
+    seconds = (int)timeSinceStart % 60;
+    minutes = (timeSinceStart - seconds) / 60;
     spawnPosition = timerPosition;
+    i = -timerDigitLimit / 2;
 
     while (i < 0)
     {
@@ -794,8 +818,8 @@ void CheckHighScore()
 
 void GetHighScore()
 {
-    printf("Getting Highscore\n");
     FILE *saveFile = fopen(savePath, "rb");
+    printf("Getting Highscore\n");
     if(saveFile == NULL)
     {
         printf("!!!!Error Reading Highscore!!!!\n");
@@ -809,8 +833,8 @@ void GetHighScore()
 
 void GetSettings()
 {
-    printf("Getting Settings\n");
     FILE *settingsFile = fopen(settingsPath, "r");
+    printf("Getting Settings\n");
     if(settingsFile == NULL)
     {
         printf("!!!!Error Reading Settings!!!!\n");
@@ -855,7 +879,6 @@ void Inputs()
         player.lookDirection = input.x;
     }
 
-
     input = NormalizeVector(input);
 }
 
@@ -878,23 +901,6 @@ void ClampPlayerPositionToScreenDimensions()
         player.position.y = 0;
     else if(player.position.y > screenDimensions.y)
         player.position.y = screenDimensions.y;
-}
-
-char DealDamage(char *health)
-{
-    return --*health <= 0;
-}
-
-void BulletMovement()
-{
-    Bullet *bullet;
-    int i;
-    for (i = 0; i < bullets.bulletCount; i++)
-    {
-        bullet = (bullets.bulletArray + i);
-        bullet -> position.x += bullet -> velocity.x; 
-        bullet -> position.y += bullet -> velocity.y; 
-    }
 }
 
 void ShootSoundEffect()
@@ -929,7 +935,9 @@ void PlayerShoot()
 {
     Vector2D shootDir;
     Bullet *newBullet;
-    float offset = (player.image.size.x + enemyBulletImage.size.x * 2.0);
+    float offset;
+
+    offset = (player.image.size.x + enemyBulletImage.size.x * 2.0);
         
     if(player.lookDirection != 1)
         offset = -offset;
@@ -959,7 +967,9 @@ void EnemyShoot()
     Enemy *enemy;
     Bullet *bullet;
     int i;
-    float offset = (player.image.size.x + enemyBulletImage.size.x * 2.0);
+    float offset;
+
+    offset = (player.image.size.x + enemyBulletImage.size.x * 2.0);
 
     for (i = 0; i < enemies.enemyCount; i++)
     {
@@ -988,21 +998,21 @@ void EnemyShoot()
             ShootSoundEffect();
         }
     }
-
 }
 
 void BulletCollisions()
 {
     Bullet *bullet;
     Enemy *enemy;
-    int bulletCounter = 0;
-    int enemyCounter = 0;
-    int i = 0;
+    int bulletCounter;
+    int enemyCounter;
+
     printf("Enemy-Bullet\n");
     for (enemyCounter = 0; enemyCounter < enemies.enemyCount; enemyCounter++)
     {
         printf("Enemy-Bullet|enemyCounter\n");
         enemy = (enemies.enemyArray + enemyCounter);
+
         for (bulletCounter = 0; bulletCounter < bullets.bulletCount; bulletCounter++)
         {
             bullet = (bullets.bulletArray + bulletCounter);
@@ -1055,7 +1065,18 @@ void BulletCollisions()
                 isGameOver = 1;
         }
     }
-        
+}
+
+void BulletMovement()
+{
+    Bullet *bullet;
+    int i;
+    for (i = 0; i < bullets.bulletCount; i++)
+    {
+        bullet = (bullets.bulletArray + i);
+        bullet -> position.x += bullet -> velocity.x; 
+        bullet -> position.y += bullet -> velocity.y; 
+    }
 }
 
 void DestroyGame()
