@@ -149,6 +149,16 @@ ALLEGRO_SAMPLE_ID enemyDieSoundID;
 
 ALLEGRO_BITMAP *numberTable  = NULL;
 
+const char *playerImagePath = "Images/Player.png";
+const char *enemyImagePath = "Images/Enemy.png";
+const char *bulletImagePath = "Images/Bullet.png";
+const char *gameOverImagePath = "Images/GameOver.png";
+const char *numbersImagePath = "Images/Numbers.png";
+
+const char *dieSoundPath = "Sounds/Die.wav";
+const char *bgmSoundPath = "Sounds/Background.wav";
+const char *shootSoundPath = "Sounds/Shoot.wav";
+
 const char *displayName = "Syn Game";
 const char *savePath = "Save.syn";
 const char *settingsPath = "Settings.syn";
@@ -399,14 +409,14 @@ char InitializeGameWindow()
 	backgroundColor.b = .1;
 	
 	/* BGM is an exception since I don't want to it to restart itself every restart */
-	BGM = al_load_sample("Sounds/Background.wav");
+	BGM = al_load_sample(bgmSoundPath);
 	al_play_sample(BGM, 1.0, 0.0, 1.0, ALLEGRO_PLAYMODE_LOOP, NULL);
 }
 
 char InitializeGame()
 {
-	shootSound 		= al_load_sample("Sounds/Shoot.wav");
-	enemyDieSound 	= al_load_sample("Sounds/Die.wav");
+	shootSound 		= al_load_sample(shootSoundPath);
+	enemyDieSound 	= al_load_sample(dieSoundPath);
 	
 	InitializeEnemies();
 	GetHighScore();
@@ -417,7 +427,7 @@ char InitializeGame()
 	player.moveSpeed = playerSpeed * screenSizeMultiplier;
 	player.shootPerSecond = 10;
 	player.health = initialPlayerHealth;
-	player.playerImage = al_load_bitmap("Images/Player.png");
+	player.playerImage = al_load_bitmap(playerImagePath);
 	
 	if(player.playerImage == NULL ||
 		shootSound == NULL ||
@@ -442,10 +452,10 @@ void InitializeEnemies()
 	enemies.enemyLimit = initialEnemyLimit;
 	enemies.enemyCount = 0;
 	enemies.enemyArray = (Enemy *) malloc(sizeof(Enemy) * enemies.enemyCount);
-	enemyImage = al_load_bitmap("Images/Enemy.png");
-	numberTable = al_load_bitmap("Images/Numbers.png");
-	enemyBulletImage = al_load_bitmap("Images/Bullet.png");
-	gameOverImage = al_load_bitmap("Images/GameOver.png");
+	enemyImage = al_load_bitmap(enemyImagePath);
+	numberTable = al_load_bitmap(numbersImagePath);
+	enemyBulletImage = al_load_bitmap(bulletImagePath);
+	gameOverImage = al_load_bitmap(gameOverImagePath);
 	SpawnEnemies();
 }
 
