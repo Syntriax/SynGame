@@ -83,7 +83,7 @@ struct
     Vector2D position;
     char health;
     float moveSpeed;
-    byte lookDirection;
+    int lookDirection;
     int shootPerSecond;
     float shootCooldown;
     unsigned int killedEnemyCount;
@@ -129,8 +129,8 @@ void BulletCollisions();
 void DestroyGame();
 void DestroyGameWindow();
 
-byte isVectorExceedingLimits(Vector2D vector, Vector2D limits);
-byte CheckCollision(Vector2D *firstPos, Vector2D *secondPos, Image *firstMap, Image *secondMap);
+int isVectorExceedingLimits(Vector2D vector, Vector2D limits);
+int CheckCollision(Vector2D *firstPos, Vector2D *secondPos, Image *firstMap, Image *secondMap);
 
 float VectorMagnitude(Vector2D vector);
 float VectorDistanceBetween(Vector2D vectorFirst, Vector2D vectorSecond);
@@ -200,9 +200,9 @@ int enemyLimiter = 12;
 
 Vector2D input;
 
-byte isRestart  = 0;
-byte isRunning  = 1;
-byte isGameOver = 0;
+int isRestart  = 0;
+int isRunning  = 1;
+int isGameOver = 0;
 
 void Update()
 {
@@ -344,9 +344,9 @@ float VectorDistanceBetween(Vector2D vectorFirst, Vector2D vectorSecond)
     return VectorMagnitude(difference);
 }
 
-byte isVectorExceedingLimits(Vector2D vector, Vector2D limits)
+int isVectorExceedingLimits(Vector2D vector, Vector2D limits)
 {
-    byte result = vector.x > limits.x || vector.x < 0 || vector.y > limits.y || vector.y < 0;
+    int result = vector.x > limits.x || vector.x < 0 || vector.y > limits.y || vector.y < 0;
     return result;
 }
 
@@ -355,9 +355,9 @@ byte isVectorExceedingLimits(Vector2D vector, Vector2D limits)
     And compares the distance between those objects to the minimum distancce to check if they're colliding.
     It's the most simple and optimized way I can think of for a game like this.
 */
-byte CheckCollision(Vector2D *firstPos, Vector2D *secondPos, Image *firstMap, Image *secondMap)
+int CheckCollision(Vector2D *firstPos, Vector2D *secondPos, Image *firstMap, Image *secondMap)
 {
-    byte result;
+    int result;
     float minDistance;
     float distance;
         
