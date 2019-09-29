@@ -83,7 +83,7 @@ struct
     Vector2D position;
     char health;
     float moveSpeed;
-    int lookDirection;
+    char lookDirection;
     int shootPerSecond;
     float shootCooldown;
     unsigned int killedEnemyCount;
@@ -96,6 +96,8 @@ char InitializeGameWindow();
 char InitializeGame();
 char InitializeEnemies();
 char DealDamage(char *health);
+char isVectorExceedingLimits(Vector2D vector, Vector2D limits);
+char CheckCollision(Vector2D *firstPos, Vector2D *secondPos, Image *firstMap, Image *secondMap);
 
 void Update();
 void SpawnEnemies();
@@ -129,8 +131,6 @@ void BulletCollisions();
 void DestroyGame();
 void DestroyGameWindow();
 
-int isVectorExceedingLimits(Vector2D vector, Vector2D limits);
-int CheckCollision(Vector2D *firstPos, Vector2D *secondPos, Image *firstMap, Image *secondMap);
 
 float VectorMagnitude(Vector2D vector);
 float VectorDistanceBetween(Vector2D vectorFirst, Vector2D vectorSecond);
@@ -200,9 +200,9 @@ int enemyLimiter = 12;
 
 Vector2D input;
 
-int isRestart  = 0;
-int isRunning  = 1;
-int isGameOver = 0;
+char isRestart  = 0;
+char isRunning  = 1;
+char isGameOver = 0;
 
 void Update()
 {
@@ -344,9 +344,9 @@ float VectorDistanceBetween(Vector2D vectorFirst, Vector2D vectorSecond)
     return VectorMagnitude(difference);
 }
 
-int isVectorExceedingLimits(Vector2D vector, Vector2D limits)
+char isVectorExceedingLimits(Vector2D vector, Vector2D limits)
 {
-    int result = vector.x > limits.x || vector.x < 0 || vector.y > limits.y || vector.y < 0;
+    char result = vector.x > limits.x || vector.x < 0 || vector.y > limits.y || vector.y < 0;
     return result;
 }
 
@@ -355,9 +355,9 @@ int isVectorExceedingLimits(Vector2D vector, Vector2D limits)
     And compares the distance between those objects to the minimum distancce to check if they're colliding.
     It's the most simple and optimized way I can think of for a game like this.
 */
-int CheckCollision(Vector2D *firstPos, Vector2D *secondPos, Image *firstMap, Image *secondMap)
+char CheckCollision(Vector2D *firstPos, Vector2D *secondPos, Image *firstMap, Image *secondMap)
 {
-    int result;
+    char result;
     float minDistance;
     float distance;
         
